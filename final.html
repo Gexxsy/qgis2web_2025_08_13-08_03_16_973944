@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+
+            margin: 0;
+        }
+        #header {
+            position: absolute;
+            top: 10px;
+            left: 60px;
+            right: 0;
+            width: 91%;
+            z-index: 1000;
+            background-color: #ffffff;
+            padding: 2px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        #header img {
+            height: 50px;
+            margin-right: 15px;
+            margin-left: 15px;
+        }
+        #header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        /* Add footer running text styles */
+        #footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 30px;
+            background-color: white;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .running-text {
+            color: black;
+            font-size: 14px;
+            white-space: nowrap;
+            padding: 0 20px;
+            animation: marquee 20s linear infinite;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        </style>
+        <title>BATAS DESA KABUPATEN LANDAK, KALIMANTAN BARAT</title>
+    </head>
+    <body>
+        <div id="header">
+            <img src="./images/Lambang_Kabupaten_Landak.png" alt="Logo Kabupaten Landak">
+            <h1>BATAS DESA KABUPATEN LANDAK</h1>
+        </div>
+        <div id="map">
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="data/BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[-0.03951926836398797,109.43480993065404],[0.15591827339436312,109.79074151795282]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_OpenStreetMap_0');
+        map.getPane('pane_OpenStreetMap_0').style.zIndex = 400;
+        var layer_OpenStreetMap_0 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OpenStreetMap_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OpenStreetMap_0;
+        map.addLayer(layer_OpenStreetMap_0);
+        map.createPane('pane_googlesatelit_1');
+        map.getPane('pane_googlesatelit_1').style.zIndex = 401;
+        var layer_googlesatelit_1 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_googlesatelit_1',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 18
+        });
+        layer_googlesatelit_1;
+        map.addLayer(layer_googlesatelit_1);
+        function pop_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">KODE PUM DESA</th>\
+                        <td class="visible-with-data" id="Kode_PUM_D">' + (feature.properties['Kode_PUM_D'] !== null ? autolinker.link(String(feature.properties['Kode_PUM_D']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">LUAS DESA (Ha)</th>\
+                        <td class="visible-with-data" id="Luas_Desa">' + (feature.properties['Luas_Desa'] !== null ? autolinker.link(String(feature.properties['Luas_Desa']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">NAMA DESA</th>\
+                        <td class="visible-with-data" id="Nama_Desa">' + (feature.properties['Nama_Desa'] !== null ? autolinker.link(String(feature.properties['Nama_Desa']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">NAMA BUMDES</th>\
+                        <td class="visible-with-data" id="BumDes">' + (feature.properties['BumDes'] !== null ? autolinker.link(String(feature.properties['BumDes']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">NAMA KADES</th>\
+                        <td class="visible-with-data" id="NAMA_KADES">' + (feature.properties['NAMA_KADES'] !== null ? autolinker.link(String(feature.properties['NAMA_KADES']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">JUMLAH DUSUN</th>\
+                        <td class="visible-with-data" id="DUSUN">' + (feature.properties['DUSUN'] !== null ? autolinker.link(String(feature.properties['DUSUN']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2_0(feature) {
+            switch(String(feature.properties['Nama_Desa'])) {
+                case 'DESA RANTAU PANJANG':
+                    return {
+                pane: 'pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+                opacity: 1,
+                color: 'rgba(236,183,4,1.0)',
+                dashArray: '20.0,4.0,8.0,4.0',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 4.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(236,255,0,0.5019607843137255)',
+                interactive: true,
+            }
+                    break;
+                case 'DESA SEBANGKI':
+                    return {
+                pane: 'pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+                opacity: 1,
+                color: 'rgba(236,183,4,1.0)',
+                dashArray: '20.0,4.0,8.0,4.0',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 4.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(24,247,185,0.5019607843137255)',
+                interactive: true,
+            }
+                    break;
+                case 'DESA SUNGAI SEGAK':
+                    return {
+                pane: 'pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+                opacity: 1,
+                color: 'rgba(236,183,4,1.0)',
+                dashArray: '20.0,4.0,8.0,4.0',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 4.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(34,233,60,0.5019607843137255)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2');
+        map.getPane('pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2').style.zIndex = 402;
+        map.getPane('pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2').style['mix-blend-mode'] = 'normal';
+        var layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2 = new L.geoJson(json_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+            layerName: 'layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+            pane: 'pane_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2',
+            onEachFeature: pop_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2,
+            style: style_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2_0,
+        });
+        bounds_group.addLayer(layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2);
+        map.addLayer(layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2);
+        var overlaysTree = [
+            {label: 'BATAS DESA KABUPATEN LANDAK, KALIMANTAN BARAT<br /><table><tr><td style="text-align: center;"><img src="legend/BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2_DESARANTAUPANJANG0.png" /></td><td>DESA RANTAU PANJANG</td></tr><tr><td style="text-align: center;"><img src="legend/BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2_DESASEBANGKI1.png" /></td><td>DESA SEBANGKI</td></tr><tr><td style="text-align: center;"><img src="legend/BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2_DESASUNGAISEGAK2.png" /></td><td>DESA SUNGAI SEGAK</td></tr></table>', layer: layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2},
+            {label: "google satelit", layer: layer_googlesatelit_1},
+            {label: "OpenStreetMap", layer: layer_OpenStreetMap_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: false, 
+        });
+        lay.addTo(map);
+		document.addEventListener("DOMContentLoaded", function() {
+            // set new Layers List height which considers toggle icon
+            function newLayersListHeight() {
+                var layerScrollbarElement = document.querySelector('.leaflet-control-layers-scrollbar');
+                if (layerScrollbarElement) {
+                    var layersListElement = document.querySelector('.leaflet-control-layers-list');
+                    var originalHeight = layersListElement.style.height 
+                        || window.getComputedStyle(layersListElement).height;
+                    var newHeight = parseFloat(originalHeight) - 50;
+                    layersListElement.style.height = newHeight + 'px';
+                }
+            }
+            var isLayersListExpanded = true;
+            var controlLayersElement = document.querySelector('.leaflet-control-layers');
+            var toggleLayerControl = document.querySelector('.leaflet-control-layers-toggle');
+            // toggle Collapsed/Expanded and apply new Layers List height
+            toggleLayerControl.addEventListener('click', function() {
+                if (isLayersListExpanded) {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                } else {
+                    controlLayersElement.classList.add('leaflet-control-layers-expanded');
+                }
+                isLayersListExpanded = !isLayersListExpanded;
+                newLayersListHeight()
+            });	
+			// apply new Layers List height if toggle layerstree
+			if (controlLayersElement) {
+				controlLayersElement.addEventListener('click', function(event) {
+					var toggleLayerHeaderPointer = event.target.closest('.leaflet-layerstree-header-pointer span');
+					if (toggleLayerHeaderPointer) {
+						newLayersListHeight();
+					}
+				});
+			}
+            // Collapsed/Expanded at Start to apply new height
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            setTimeout(function() {
+                toggleLayerControl.click();
+            }, 10);
+            // Collapsed touch/small screen
+            var isSmallScreen = window.innerWidth < 650;
+            if (isSmallScreen) {
+                setTimeout(function() {
+                    controlLayersElement.classList.remove('leaflet-control-layers-expanded');
+                    isLayersListExpanded = !isLayersListExpanded;
+                }, 500);
+            }  
+        });       
+        setBounds();
+        map.addControl(new L.Control.Search({
+            layer: layer_BATASDESAKABUPATENLANDAKKALIMANTANBARAT_2,
+            initial: false,
+            hideMarkerOnCollapse: true,
+            propertyName: 'Nama_Desa'}));
+        if (typeof url === 'undefined') {
+            document.getElementsByClassName('search-button')[0].className += ' fa fa-binoculars';
+        } else {
+            document.getElementsByClassName('search-button')[1].className += ' fa fa-binoculars';
+        }
+        </script>
+        <!-- Add the footer running text element -->
+        <div id="footer">
+            <div class="running-text">
+                INFORMASI: Peta Batas Desa Kabupaten Landak, Kalimantan Barat ini merupakan peta resmi yang dikeluarkan oleh Pemerintah Kabupaten Landak.
+            </div>
+        </div>
+    </body>
+</html>
